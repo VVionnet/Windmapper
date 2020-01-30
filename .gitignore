@@ -1,0 +1,8 @@
+__pycache__
+*.tif
+*.vrt
+*.asc
+*.prj
+WindNinja_cli
+.python-version
+.idea/
