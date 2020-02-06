@@ -29,13 +29,29 @@ pip install gdal==2.4.2
 ## WindNinja
 WindMapper depends upon WindNinja. This can be compiled from source, or can be installed via conan. 
 
-```
-
-
-```
-
-
-
-## Installation of WindNinja
+### MacOs
+Currently the MacOS OpenMP build of WindNinja does not work
+https://github.com/firelab/windninja/issues/355
 
 # Use
+
+Ensure the paths `fic_config_WN` and `wn_exe` are correctly set in the configuration file.
+
+WindMapper may be run in two modes: 
+
+1) download a SRTM tile that corresponds to a lat/long bounding box defined by the user or;
+2) use a user-supplied DEM
+
+The example given in `examples/download_DEM` can be run as
+```
+python wind_mapper_generic.py examples/download_DEM/param_download_DEM.py
+```
+
+
+
+
+
+
+
+
+
