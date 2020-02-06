@@ -241,7 +241,7 @@ def main():
                 name_base = dir_tmp + '/' + name_tmp + '_' + str(int(wdir)) + '_10_' + str(res_wind) + 'm_'
                 os.system(
                     './WindNinja_cli ' + fic_config_WN + ' --elevation_file ' + fic_dem_in + ' --mesh_resolution ' + str(
-                        res_wind) + ' --input_direction ' + str(wdir) + ' --output_path ' + dir_tmp)
+                        res_wind) + ' --input_direction ' + str(int(wdir)) + ' --output_path ' + dir_tmp)
 
                 for var in var_transform:
                     name_gen = name_base + var
