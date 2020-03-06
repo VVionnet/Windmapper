@@ -28,7 +28,7 @@ def main():
     if len(sys.argv) == 1:
         print(
             'ERROR: wind_mapper.py requires one argument [configuration file] (i.e. wind_mapper.py '
-			'param_existing_DEM.py)')
+            'param_existing_DEM.py)')
         return
 
     # Get name of configuration file/module
@@ -50,7 +50,7 @@ def main():
     else:
         os.symlink(wn_exe, 'WindNinja_cli')
 
-    environ["WINDNINJA_DATA"] = os.path.join(os.path.dirname(wn_exe),'..','share','windninja')
+    environ["WINDNINJA_DATA"] = os.path.join(os.path.dirname(wn_exe), '..', 'share', 'windninja')
 
     # Parameter for atmospheric stability in Wind Ninja mass conserving (default value)
     alpha = 1
@@ -137,7 +137,24 @@ def main():
     fic_utm = user_output_dir + '/' + name_utm + '.tif'
 
     if (use_existing_dem):
-        shutil.copy(dem_filename, fic_utm)
+
+        # if we are using a user-provided dem, ensure there are no NoData values that border the DEM which will cause issues
+
+        # mask data values
+        exec_str =  """gdal_calc.py -A %s --outfile %s --NoDataValue 0 --calc="1*(A>0)" """ % (dem_filename, user_output_dir + 'out.tif')
+        os.system(exec_str)
+
+        # convert to shp file
+        exec_str = """ gdal_polygonize.py -8 -b 1 -f "ESRI Shapefile" %s %s/pols """ %(user_output_dir + 'out.tif', user_output_dir)
+        os.system(exec_str)
+
+        # clip original with the shpfile
+        exec_str = """ gdalwarp -of GTiff -cutline %s/pols/out.shp -crop_to_cutline -dstalpha %s %s """ %(user_output_dir, dem_filename,fic_utm)
+        os.system(exec_str)
+
+        shutil.rmtree("%s/pols"% (user_output_dir) )
+        os.remove("%s/out.tif" % (user_output_dir) )
+
     else:
 
         # Properties of the bounding box
@@ -151,8 +168,8 @@ def main():
 
         # Download reference SRTM data
         elevation.clip(bounds=(
-        lon_min - delta_lon * fac, lat_min - delta_lat * fac, lon_max + delta_lon * fac, lat_max + delta_lat * fac),
-                       output=fic_download)
+            lon_min - delta_lon * fac, lat_min - delta_lat * fac, lon_max + delta_lon * fac, lat_max + delta_lat * fac),
+            output=fic_download)
 
         # Get corresponding UTM zone (center of the zone to extract)
         nepsg_utm = int(32700 - round((45 + lat_mid) / 90, 0) * 100 + round((183 + lon_mid) / 6, 0))
