@@ -3,23 +3,16 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to WindMapper's documentation!
+Welcome to Windmapper's documentation!
 ======================================
 
 Wind_mapper is a tool used to produce pre-computed libraries of wind
 field used for wind downscaling. Wind_mapper uses the
 `WindNinja <https://github.com/firelab/windninja>`__ wind diagnostic
-model. It has been primarily developped for wind downscaling for the
-Canadian Hydrological Model `CHM <https://github.com/Chrismarsh/CHM>`__.
+model. 
 
 
 .. image:: images/WM-main.png
-
-
-
-
-
-
 
 
 
@@ -31,6 +24,7 @@ Canadian Hydrological Model `CHM <https://github.com/Chrismarsh/CHM>`__.
 
 
    build
+   use
 
 
 
