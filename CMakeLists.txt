@@ -23,11 +23,16 @@ conan_add_remote(NAME CHM
 
 conan_cmake_run(CONANFILE conanfile.py
                 BASIC_SETUP
+                KEEP_RPATHS
                 SETTINGS compiler.cppstd=14
                 SETTINGS compiler.libcxx=${CONAN_LIB_STD}
                 INSTALL_FOLDER ${CMAKE_BINARY_DIR}
                 NO_OUTPUT_DIRS
                 BUILD missing
+)
+
+execute_process(
+    COMMAND bash -c "otool -l ${CMAKE_BINARY_DIR}/bin/WindNinja_cli| grep name | grep -v segname | grep -v sectname |  grep -v /usr | grep -v /System | grep -v @rpath | awk '{print $2}' | while read x; do install_name_tool -change $x @rpath/`echo $x | grep -Eo '[a-zA-Z0-9_\.-]+\.dylib'` ${CMAKE_BINARY_DIR}/bin/WindNinja_cli; done"
 )
 
 install( DIRECTORY ${CMAKE_BINARY_DIR}/lib/
