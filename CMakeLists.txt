@@ -30,18 +30,11 @@ conan_cmake_run(CONANFILE conanfile.py
                 BUILD missing
 )
 
-#conan_cmake_run(CONANFILE conanfile.py
-#                SETTINGS compiler.cppstd=14
-#                SETTINGS compiler.libcxx=${CONAN_LIB_STD}
-#                BASIC_SETUP
-#                CMAKE_TARGETS
-#               KEEP_RPATHS
-#                NO_OUTPUT_DIRS
-#               INSTALL_FOLDER ${CMAKE_INSTALL_PREFIX}
-#                BUILD missing)
-
 install( DIRECTORY ${CMAKE_BINARY_DIR}/lib/
          DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/lib/
+)
+install( DIRECTORY ${CMAKE_BINARY_DIR}/share/
+         DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/share/
 )
 install( PROGRAMS ${CMAKE_BINARY_DIR}/bin/WindNinja_cli
          DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/bin/

@@ -20,7 +20,7 @@ class WindNinjaConan(ConanFile):
         pass
 
     def requirements(self):
-        self.requires( "windninja/3.5.3@CHM/stable" )
+        self.requires("windninja/3.5.3@CHM/stable" )
 
     def deploy(self):
         self.copy("*")  # copy from current package
@@ -30,5 +30,5 @@ class WindNinjaConan(ConanFile):
     def imports(self):
         self.copy("*.so*", "lib", "lib")  # From bin to bin
         self.copy("*.dylib*", "lib", "lib")  # From lib to bin
-
+        self.copy('*','share','share')
         self.copy("*", "bin", "bin")  # From lib to bin
