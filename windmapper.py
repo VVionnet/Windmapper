@@ -50,14 +50,17 @@ def main():
     # path to Wind Ninja executable
 
     # default path assumes we are running out of pip or we have a symlink @ ./bin/WindNinja_cli
-    wn_exe = os.path.join(os.getcwd(), 'bin', 'WindNinja_cli')
+    wn_exe = os.path.join(
+        os.path.dirname(
+            os.path.abspath(__file__)), 'bin', 'WindNinja_cli')
 
     if hasattr(X, 'wn_exe'):
         wn_exe = X.wn_exe
 
-        if not os.path.exists(wn_exe):
-            print('ERROR: Invalid path for WindNinja_cli given in `wn_exe` config options.')
-            exit(-1)
+    if not os.path.exists(wn_exe):
+        print('ERROR: Invalid path for WindNinja_cli. Consider specifying a `wn_exe` config option or confirm it is correct.')
+        print(f'Path = {wn_exe}')
+        exit(-1)
 
     environ["WINDNINJA_DATA"] = os.path.join(os.path.dirname(wn_exe), '..', 'share', 'windninja')
 
@@ -68,6 +71,10 @@ def main():
     ncat = 4
     if hasattr(X, 'ncat'):
         ncat = X.ncat
+
+    if ncat < 1:
+        print('ERROR ncat must be > 0 ')
+        exit(-1)
 
     use_existing_dem = True
 
@@ -159,6 +166,15 @@ write_farsite_atm = false """
         with open(fic_config_WN, 'w') as fic_file:
             fic_file.write(fic_config)
 
+    # we need to make sure we pickup the right paths to all the gdal scripts
+    gdal_prefix = ''
+    try:
+        gdal_prefix = subprocess.run(["gdal-config", "--prefix"], stdout=subprocess.PIPE).stdout.decode()
+        gdal_prefix = gdal_prefix.replace('\n', '')
+        gdal_prefix += '/bin/'
+    except:
+        raise BaseException(""" ERROR: Could not find gdal-config, please ensure it is installed and on $PATH """)
+
     # Wind direction increment
     delta_wind = 360. / ncat
 
@@ -187,17 +203,17 @@ write_farsite_atm = false """
         # DEM which will cause issues
 
         # mask data values
-        exec_str = """gdal_calc.py -A %s --outfile %s --NoDataValue 0 --calc="1*(A>0)" """ % (
+        exec_str = """%sgdal_calc.py -A %s --outfile %s --NoDataValue 0 --calc="1*(A>0)" """ % (gdal_prefix,
             dem_filename, user_output_dir + 'out.tif')
         subprocess.check_call([exec_str], shell=True)
 
         # convert to shp file
-        exec_str = """ gdal_polygonize.py -8 -b 1 -f "ESRI Shapefile" %s %s/pols """ % (
+        exec_str = """%sgdal_polygonize.py -8 -b 1 -f "ESRI Shapefile" %s %s/pols """ % (gdal_prefix,
             user_output_dir + 'out.tif', user_output_dir)
         subprocess.check_call([exec_str], shell=True)
 
         # clip original with the shpfile
-        exec_str = """ gdalwarp -of GTiff -cutline %s/pols/out.shp -crop_to_cutline -dstalpha %s %s """ % (
+        exec_str = """%sgdalwarp -of GTiff -cutline %s/pols/out.shp -crop_to_cutline -dstalpha %s %s """ % (gdal_prefix,
             user_output_dir, dem_filename, fic_utm)
         subprocess.check_call([exec_str], shell=True)
 
@@ -232,9 +248,9 @@ write_farsite_atm = false """
         xmax, ymax = transform(WGS84, inp, lon_max, lat_max)
 
         # Extract a rectangular region of interest in utm at 30 m
-        exec_str = 'gdalwarp %s %s -overwrite -dstnodata -9999 -t_srs "%s" -te %.30f %.30f %.30f %.30f  -tr %.30f ' \
+        exec_str = '%sgdalwarp %s %s -overwrite -dstnodata -9999 -t_srs "%s" -te %.30f %.30f %.30f %.30f  -tr %.30f ' \
                    '%.30f -r bilinear '
-        com_string = exec_str % (fic_download, fic_utm, srs_out.ExportToProj4(), xmin, ymin, xmax, ymax, 30, 30)
+        com_string = exec_str % (gdal_prefix, fic_download, fic_utm, srs_out.ExportToProj4(), xmin, ymin, xmax, ymax, 30, 30)
         subprocess.check_call([com_string], stdout=subprocess.PIPE, shell=True)
 
     # Get informations on projected file
@@ -289,7 +305,7 @@ write_farsite_atm = false """
 
                 name_tmp = 'tmp_' + str(i) + "_" + str(j)
                 fic_tmp = user_output_dir + name_tmp + ".tif"
-                clip_tif(fic_utm, fic_tmp, xbeg, xbeg + delx, ybeg, ybeg + dely)
+                clip_tif(fic_utm, fic_tmp, xbeg, xbeg + delx, ybeg, ybeg + dely, gdal_prefix)
 
     # Build WindNinja winds maps
     x_y_wdir = itertools.product(range(0, nopt_x),
@@ -299,7 +315,7 @@ write_farsite_atm = false """
 
     print(f'Running WindNinja on {len(x_y_wdir)} combinations of direction and sub-area. Please be patient...')
     with futures.ProcessPoolExecutor(max_workers=nworkers) as executor:
-        res = list(tqdm(executor.map(partial(call_WN_1dir, user_output_dir, fic_config_WN,
+        res = list(tqdm(executor.map(partial(call_WN_1dir, gdal_prefix, user_output_dir, fic_config_WN,
                                              list_tif_2_vrt, nopt_x, nopt_y, nx, ny,
                                              pixel_height, pixel_width, res_wind, targ_res, var_transform, wind_average,
                                              wn_exe,
@@ -313,13 +329,13 @@ write_farsite_atm = false """
             for var in list_tif_2_vrt:
                 name_vrt = user_output_dir + name_utm + '_' + str(int(wdir)) + '_' + var + '.vrt'
                 cmd = "find " + user_output_dir[0:-1] + " -type f -name '*_" + str(int(wdir)) + "_10_" + str(
-                    res_wind) + "m_" + var + "*.tif' -exec gdalbuildvrt " + name_vrt + " {} +"
+                    res_wind) + "m_" + var + "*.tif' -exec " + gdal_prefix+ "gdalbuildvrt " + name_vrt + " {} +"
                 subprocess.check_call([cmd], stdout=subprocess.PIPE,
                                       shell=True)
             pbar.update(1)
 
 
-def call_WN_1dir(user_output_dir, fic_config_WN, list_tif_2_vrt, nopt_x, nopt_y, nx, ny,
+def call_WN_1dir(gdal_prefix, user_output_dir, fic_config_WN, list_tif_2_vrt, nopt_x, nopt_y, nx, ny,
                  pixel_height, pixel_width, res_wind, targ_res, var_transform, wind_average, wn_exe, xmin, ymin,
                  ijwdir):
     i, j, wdir = ijwdir
@@ -341,7 +357,7 @@ def call_WN_1dir(user_output_dir, fic_config_WN, list_tif_2_vrt, nopt_x, nopt_y,
                           shell=True)
     for var in var_transform:
         name_gen = name_base + var
-        subprocess.check_call(['gdal_translate ' + name_gen + '.asc ' + name_gen + '.tif'], stdout=subprocess.PIPE,
+        subprocess.check_call([gdal_prefix + 'gdal_translate ' + name_gen + '.asc ' + name_gen + '.tif'], stdout=subprocess.PIPE,
                               shell=True)
 
         os.remove(name_gen + '.asc')
@@ -380,12 +396,12 @@ def call_WN_1dir(user_output_dir, fic_config_WN, list_tif_2_vrt, nopt_x, nopt_y,
         if nopt_x == 1 and nopt_y == 1:
             shutil.copy(fic_tif, fic_tif_fin)
         else:
-            clip_tif(fic_tif, fic_tif_fin, xbeg, xbeg + delx, ybeg, ybeg + dely)
+            clip_tif(fic_tif, fic_tif_fin, xbeg, xbeg + delx, ybeg, ybeg + dely, gdal_prefix)
         os.remove(fic_tif)
 
 
-def clip_tif(fic_in, fic_out, xmin, xmax, ymin, ymax):
-    com_string = "gdal_translate -of GTIFF -projwin " + str(xmin) + ", " + str(ymax) + ", " + str(xmax) + ", " + str(
+def clip_tif(fic_in, fic_out, xmin, xmax, ymin, ymax, gdal_prefix):
+    com_string = gdal_prefix + "gdal_translate -of GTIFF -projwin " + str(xmin) + ", " + str(ymax) + ", " + str(xmax) + ", " + str(
         ymin) + " " + fic_in + " " + fic_out
     subprocess.check_call([com_string], stdout=subprocess.PIPE, shell=True)
 
