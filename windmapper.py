@@ -23,6 +23,7 @@ from scipy import ndimage
 from os import environ
 from concurrent import futures
 from tqdm import tqdm
+
 gdal.UseExceptions()  # Enable exception support
 
 
@@ -129,7 +130,7 @@ def main():
     if 'sched_getaffinity' in dir(os):
         nworkers = len(os.sched_getaffinity(0))
 
-    #ensure correct formatting on the output
+    # ensure correct formatting on the output
     fic_config = F"""num_threads = {nworkers}  
 initialization_method = domainAverageInitialization 
 units_mesh_resolution = m 
@@ -157,7 +158,6 @@ write_farsite_atm = false """
         fic_config_WN = os.path.join(user_output_dir, 'default_cli_massSolver.cfg')
         with open(fic_config_WN, 'w') as fic_file:
             fic_file.write(fic_config)
-
 
     # Wind direction increment
     delta_wind = 360. / ncat
@@ -188,17 +188,17 @@ write_farsite_atm = false """
 
         # mask data values
         exec_str = """gdal_calc.py -A %s --outfile %s --NoDataValue 0 --calc="1*(A>0)" """ % (
-        dem_filename, user_output_dir + 'out.tif')
+            dem_filename, user_output_dir + 'out.tif')
         subprocess.check_call([exec_str], shell=True)
 
         # convert to shp file
         exec_str = """ gdal_polygonize.py -8 -b 1 -f "ESRI Shapefile" %s %s/pols """ % (
-        user_output_dir + 'out.tif', user_output_dir)
+            user_output_dir + 'out.tif', user_output_dir)
         subprocess.check_call([exec_str], shell=True)
 
         # clip original with the shpfile
         exec_str = """ gdalwarp -of GTiff -cutline %s/pols/out.shp -crop_to_cutline -dstalpha %s %s """ % (
-        user_output_dir, dem_filename, fic_utm)
+            user_output_dir, dem_filename, fic_utm)
         subprocess.check_call([exec_str], shell=True)
 
         shutil.rmtree("%s/pols" % user_output_dir)
@@ -291,26 +291,21 @@ write_farsite_atm = false """
                 fic_tmp = user_output_dir + name_tmp + ".tif"
                 clip_tif(fic_utm, fic_tmp, xbeg, xbeg + delx, ybeg, ybeg + dely)
 
-    # for i in range(0, nopt_x):
-    #     for j in range(0, nopt_y):
-
-
-
     # Build WindNinja winds maps
-    # for wdir in np.arange(0, 360., delta_wind):
-    x_y_wdir = itertools.product( range(0, nopt_x),
-                              range(0, nopt_y),
-                              np.arange(0, 360., delta_wind))
+    x_y_wdir = itertools.product(range(0, nopt_x),
+                                 range(0, nopt_y),
+                                 np.arange(0, 360., delta_wind))
     x_y_wdir = [p for p in x_y_wdir]
 
     print(f'Running WindNinja on {len(x_y_wdir)} combinations of direction and sub-area. Please be patient...')
     with futures.ProcessPoolExecutor(max_workers=nworkers) as executor:
         res = list(tqdm(executor.map(partial(call_WN_1dir, user_output_dir, fic_config_WN,
-                                          list_tif_2_vrt, nopt_x, nopt_y, nx, ny,
-                 pixel_height, pixel_width, res_wind, targ_res, var_transform, wind_average, wn_exe,
-                 xmin, ymin), x_y_wdir), total=len(x_y_wdir)))
+                                             list_tif_2_vrt, nopt_x, nopt_y, nx, ny,
+                                             pixel_height, pixel_width, res_wind, targ_res, var_transform, wind_average,
+                                             wn_exe,
+                                             xmin, ymin), x_y_wdir), total=len(x_y_wdir)))
 
-
+    print('Building VRTs...')
     # Loop on wind direction to build reference vrt file to be used by mesher
     nwind = np.arange(0, 360., delta_wind)
     with tqdm(total=len(nwind)) as pbar:
@@ -324,10 +319,9 @@ write_farsite_atm = false """
             pbar.update(1)
 
 
-
 def call_WN_1dir(user_output_dir, fic_config_WN, list_tif_2_vrt, nopt_x, nopt_y, nx, ny,
-                 pixel_height, pixel_width, res_wind, targ_res, var_transform, wind_average, wn_exe, xmin, ymin, ijwdir):
-
+                 pixel_height, pixel_width, res_wind, targ_res, var_transform, wind_average, wn_exe, xmin, ymin,
+                 ijwdir):
     i, j, wdir = ijwdir
 
     # Out directory
@@ -343,10 +337,12 @@ def call_WN_1dir(user_output_dir, fic_config_WN, list_tif_2_vrt, nopt_x, nopt_y,
     name_base = dir_tmp + '/' + name_tmp + '_' + str(int(wdir)) + '_10_' + str(res_wind) + 'm_'
     subprocess.check_call([wn_exe + ' ' +
                            fic_config_WN + ' --elevation_file ' + fic_dem_in + ' --mesh_resolution ' + str(
-        res_wind) + ' --input_direction ' + str(int(wdir)) + ' --output_path ' + dir_tmp], stdout=subprocess.PIPE, shell=True)
+        res_wind) + ' --input_direction ' + str(int(wdir)) + ' --output_path ' + dir_tmp], stdout=subprocess.PIPE,
+                          shell=True)
     for var in var_transform:
         name_gen = name_base + var
-        subprocess.check_call(['gdal_translate ' + name_gen + '.asc ' + name_gen + '.tif'], stdout=subprocess.PIPE, shell=True)
+        subprocess.check_call(['gdal_translate ' + name_gen + '.asc ' + name_gen + '.tif'], stdout=subprocess.PIPE,
+                              shell=True)
 
         os.remove(name_gen + '.asc')
         os.remove(name_gen + '.prj')
