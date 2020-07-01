@@ -205,17 +205,17 @@ write_farsite_atm = false """
         # mask data values
         exec_str = """%sgdal_calc.py -A %s --outfile %s --NoDataValue 0 --calc="1*(A>0)" """ % (gdal_prefix,
             dem_filename, user_output_dir + 'out.tif')
-        subprocess.check_call([exec_str], shell=True)
+        subprocess.check_call([exec_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
         # convert to shp file
         exec_str = """%sgdal_polygonize.py -8 -b 1 -f "ESRI Shapefile" %s %s/pols """ % (gdal_prefix,
             user_output_dir + 'out.tif', user_output_dir)
-        subprocess.check_call([exec_str], shell=True)
+        subprocess.check_call([exec_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
         # clip original with the shpfile
         exec_str = """%sgdalwarp -of GTiff -cutline %s/pols/out.shp -crop_to_cutline -dstalpha %s %s """ % (gdal_prefix,
             user_output_dir, dem_filename, fic_utm)
-        subprocess.check_call([exec_str], shell=True)
+        subprocess.check_call([exec_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
         shutil.rmtree("%s/pols" % user_output_dir)
         os.remove("%s/out.tif" % user_output_dir)
@@ -251,7 +251,7 @@ write_farsite_atm = false """
         exec_str = '%sgdalwarp %s %s -overwrite -dstnodata -9999 -t_srs "%s" -te %.30f %.30f %.30f %.30f  -tr %.30f ' \
                    '%.30f -r bilinear '
         com_string = exec_str % (gdal_prefix, fic_download, fic_utm, srs_out.ExportToProj4(), xmin, ymin, xmax, ymax, 30, 30)
-        subprocess.check_call([com_string], stdout=subprocess.PIPE, shell=True)
+        subprocess.check_call([com_string], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
     # Get informations on projected file
     ds = gdal.Open(fic_utm)
@@ -313,6 +313,12 @@ write_farsite_atm = false """
                                  np.arange(0, 360., delta_wind))
     x_y_wdir = [p for p in x_y_wdir]
 
+    for d in x_y_wdir:
+        i,j,k = d
+        dir_tmp = user_output_dir + 'tmp_dir' + "_" + str(i) + "_" + str(j)
+        if not os.path.isdir(dir_tmp):
+            os.makedirs(dir_tmp)
+
     print(f'Running WindNinja on {len(x_y_wdir)} combinations of direction and sub-area. Please be patient...')
     with futures.ProcessPoolExecutor(max_workers=nworkers) as executor:
         res = list(tqdm(executor.map(partial(call_WN_1dir, gdal_prefix, user_output_dir, fic_config_WN,
@@ -345,19 +351,17 @@ def call_WN_1dir(gdal_prefix, user_output_dir, fic_config_WN, list_tif_2_vrt, no
     name_tmp = 'tmp_' + str(i) + "_" + str(j)
     fic_dem_in = user_output_dir + name_tmp + ".tif"
 
-    # Delete previous dir (if exists) and build new one
-    if os.path.isdir(dir_tmp):
-        shutil.rmtree(dir_tmp, ignore_errors=True)
-    os.makedirs(dir_tmp)
-
     name_base = dir_tmp + '/' + name_tmp + '_' + str(int(wdir)) + '_10_' + str(res_wind) + 'm_'
     subprocess.check_call([wn_exe + ' ' +
                            fic_config_WN + ' --elevation_file ' + fic_dem_in + ' --mesh_resolution ' + str(
-        res_wind) + ' --input_direction ' + str(int(wdir)) + ' --output_path ' + dir_tmp], stdout=subprocess.PIPE,
+        res_wind) + ' --input_direction ' + str(int(wdir)) + ' --output_path ' + dir_tmp],
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
                           shell=True)
     for var in var_transform:
         name_gen = name_base + var
-        subprocess.check_call([gdal_prefix + 'gdal_translate ' + name_gen + '.asc ' + name_gen + '.tif'], stdout=subprocess.PIPE,
+        subprocess.check_call([gdal_prefix + 'gdal_translate ' + name_gen + '.asc ' + name_gen + '.tif'],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               shell=True)
 
         os.remove(name_gen + '.asc')
@@ -403,7 +407,7 @@ def call_WN_1dir(gdal_prefix, user_output_dir, fic_config_WN, list_tif_2_vrt, no
 def clip_tif(fic_in, fic_out, xmin, xmax, ymin, ymax, gdal_prefix):
     com_string = gdal_prefix + "gdal_translate -of GTIFF -projwin " + str(xmin) + ", " + str(ymax) + ", " + str(xmax) + ", " + str(
         ymin) + " " + fic_in + " " + fic_out
-    subprocess.check_call([com_string], stdout=subprocess.PIPE, shell=True)
+    subprocess.check_call([com_string], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
 
 def save_tif(var, inDs, fic):
