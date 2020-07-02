@@ -5,8 +5,6 @@ Linux and MacOS are the only supported environments.
 Python >= 3.6
 
 
-
-
 Setup Python environment
 -------------------------
 It is recommended that Windmapper be installed into a Python3 virtual environment. 
@@ -39,7 +37,7 @@ The ``numpy`` and ``scipy`` packages are required but will be installed via ``py
 It's recommended that gdal python bindings are installed via `pygdal <https://github.com/nextgis/pygdal>`_ as this approach is more robust when used with virtualenvs. gdal doesn't provide wheels, so ``pygdal`` will need to build from source. Therefore ensure gdal development files (e.g., ``gdal-devel``) are installed through your system's package manager. 
 
 .. note::
-   The python gdal bindings uses a system-wide gdal
+   The python gdal bindings uses a system-wide gdal so ensure this installed via package manager/homebrew
 
 On linux, depending on the distro used, you may need to also install the gdal binaries. On Ubuntu this is
 ::
@@ -52,7 +50,7 @@ The system gdal binaries such as ``gdalwarp`` are only available in the ``gdal-b
 
 On MacOS, homebrew should be used to install gdal. Macport based installs likely work, but have not been tested. 
 
-On macos, the gdal binaries should be installed from homebrew
+On MacOS, the gdal binaries should be installed from homebrew
 
 ::
 
