@@ -22,13 +22,10 @@ model.
    :caption: Contents:
    :hidden:
 
-
+   install
    build
    use
    configuration
-
-
-
 
 
 Indices and tables
