@@ -50,6 +50,6 @@ script:
   - if [ "$test_conda" = "1" ]; then source $HOME/conda/bin/activate; conda activate Windmapper ; fi
 deploy:
   provider: script
-  script: cd .. && pwd && ls -la && bash ./.travis/deploy.sh
+  script: bash ./.travis/deploy.sh
   on:
     tags: true
