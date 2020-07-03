@@ -6,16 +6,13 @@
 Welcome to Windmapper's documentation!
 ======================================
 
-Wind_mapper is a tool used to produce pre-computed libraries of wind
+Windmapper is a tool used to produce pre-computed libraries of wind
 field used for wind downscaling. Wind_mapper uses the
 `WindNinja <https://github.com/firelab/windninja>`__ wind diagnostic
 model. 
 
 
 .. image:: images/WM-main.png
-
-
-
 
 .. toctree::
    :maxdepth: 2
